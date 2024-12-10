@@ -19,4 +19,6 @@ uint16_t inw(uint16_t port);
 
 #define NULL ((void *) 0)
 
+#include "string.h"
+
 #endif

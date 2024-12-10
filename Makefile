@@ -1,10 +1,16 @@
-OBJS = out/kernel.o out/common.o out/monitor.o out/main.o
+OBJS = out/kernel.o out/common.o out/monitor.o out/main.o out/gdtidt.o out/nasmfunc.o out/interrupt.o out/isr.o out/string.o
 
 out/%.o : kernel/%.c
-	i686-elf-gcc -I include -c -O0 -fno-builtin -fno-stack-protector -o out/$*.o kernel/$*.c
+	i686-elf-gcc -c -I include -O0 -fno-builtin -fno-stack-protector -o out/$*.o kernel/$*.c
 
 out/%.o : kernel/%.asm
 	nasm -f elf -o out/$*.o kernel/$*.asm
+
+out/%.o : lib/%.c
+	i686-elf-gcc -c -I include -O0 -fno-builtin -fno-stack-protector -o out/$*.o lib/$*.c
+
+out/%.o : lib/%.asm
+	nasm -f elf -o out/$*.o lib/$*.asm
 
 out/%.bin : boot/%.asm
 	nasm -I boot/include -o out/$*.bin boot/$*.asm
