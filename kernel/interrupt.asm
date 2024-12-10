@@ -53,6 +53,63 @@ ISR_NOERRCODE 29
 ISR_NOERRCODE 30
 ISR_NOERRCODE 31
 
+section .data
+%macro IRQ 1
+section .text
+irq%1:
+    cli
+    push byte 0
+    push %1
+    jmp irq_common_stub
+section .data
+dd irq%1
+%endmacro
+
+IRQ 32
+IRQ 33
+IRQ 34
+IRQ 35
+IRQ 36
+IRQ 37
+IRQ 38
+IRQ 39
+IRQ 40
+IRQ 41
+IRQ 42
+IRQ 43
+IRQ 44
+IRQ 45
+IRQ 46
+IRQ 47
+
+section .text
+[extern irq_handler]
+; 通用中断处理程序
+irq_common_stub:
+    pusha ; 存储所有寄存器
+
+    mov ax, ds
+    push eax ; 存储ds
+
+    mov ax, 0x10 ; 将内核数据段赋值给各段
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    call irq_handler ; 调用C语言处理函数
+
+    pop eax ; 恢复各段
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov gs, ax
+
+    popa ; 弹出所有寄存器
+
+    add esp, 8 ; 弹出错误码和中断ID
+    iret ; 从中断返回
+
 section .text
 
 [extern isr_handler] ; 将会在isr.c中被定义
