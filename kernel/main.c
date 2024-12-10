@@ -6,6 +6,7 @@
 #include "mtask.h"
 #include "keyboard.h"
 #include "shell.h"
+#include "cmos.h"
 
 task_t *create_kernel_task(void *entry)
 {
@@ -29,7 +30,11 @@ void kernel_main() // kernel.asm会跳转到这里
 
     task_t *task_a = task_init();
     task_t *task_shell = create_kernel_task(shell);
-    task_run(task_shell);
+    //task_run(task_shell);
+
+    char first_sect[512] = {0};
+    hd_read(0, 1, first_sect);
+    printk(first_sect);
 
     while (1);
 }

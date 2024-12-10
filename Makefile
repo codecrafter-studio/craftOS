@@ -1,5 +1,5 @@
 OBJS = out/kernel.o out/common.o out/monitor.o out/main.o out/gdtidt.o out/nasmfunc.o out/isr.o out/interrupt.o \
-     out/string.o out/timer.o out/memory.o out/mtask.o out/keyboard.o out/keymap.o out/fifo.o out/syscall.o out/syscall_impl.o out/stdio.o out/kstdio.o out/shell.o
+     out/string.o out/timer.o out/memory.o out/mtask.o out/keyboard.o out/keymap.o out/fifo.o out/syscall.o out/syscall_impl.o out/stdio.o out/kstdio.o out/shell.o out/cmos.o out/hd.o
 
 out/%.o : kernel/%.c
 	i686-elf-gcc -c -I include -O0 -fno-builtin -fno-stack-protector -o out/$*.o kernel/$*.c
@@ -30,4 +30,4 @@ a.img : out/boot.bin out/loader.bin out/kernel.bin
 	edimg imgin:a.img copy from:out/loader.bin to:@: copy from:out/kernel.bin to:@: imgout:a.img
 
 run : a.img
-	qemu-system-i386 -fda a.img
+	qemu-system-i386 -fda a.img -hda hd.img -boot a
