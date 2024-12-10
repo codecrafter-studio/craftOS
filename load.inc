@@ -5,3 +5,6 @@ BaseOfLoaderPhyAddr     equ BaseOfLoader * 10h ; Loader被装载到的物理地�
 
 BaseOfKernelFile            equ 08000h ; Kernel的基址
 OffsetOfKernelFile          equ 0h  ; Kernel的偏移
+
+BaseOfKernelFilePhyAddr     equ BaseOfKernelFile * 10h ; Kernel被装载到的物理地址
+KernelEntryPointPhyAddr     equ 0x100000 ; Kernel入口点，一定要与编译命令一致！！！

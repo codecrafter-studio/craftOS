@@ -257,7 +257,77 @@ LABEL_PM_START:
     mov ax, SelectorVideo ; 按照保护模式的规矩来
     mov gs, ax            ; 把选择子装入gs
 
-    mov ah, 0Fh
-    mov al, 'P'
-    mov [gs:((80 * 0 + 39) * 2)], ax ; 这一部分写入显存是通用的
-    jmp $
+    mov ax, SelectorFlatRW ; 数据段
+    mov ds, ax
+    mov es, ax
+    mov fs, ax
+    mov ss, ax
+    mov esp, TopOfStack
+
+; cs的设定已在之前的远跳转中完成
+
+    call InitKernel ; 重新放置内核
+
+    jmp SelectorFlatC:KernelEntryPointPhyAddr
+
+MemCpy: ; ds:参数2 ==> es:参数1，大小：参数3
+    push ebp
+    mov ebp, esp ; 保存ebp和esp的值
+
+    push esi
+    push edi
+    push ecx ; 暂存这三个，要用
+
+    mov edi, [ebp + 8] ; [esp + 4] ==> 第一个参数，目标内存区
+    mov esi, [ebp + 12] ; [esp + 8] ==> 第二个参数，源内存区
+    mov ecx, [ebp + 16] ; [esp + 12] ==> 第三个参数，拷贝的字节大小
+.1:
+    cmp ecx, 0 ; if (ecx == 0)
+    jz .2 ; goto .2;
+
+    mov al, [ds:esi] ; 从源内存区中获取一个值
+    inc esi ; 源内存区地址+1
+    mov byte [es:edi], al ; 将该值写入目标内存
+    inc edi ; 目标内存区地址+1
+
+    dec ecx ; 拷贝字节数大小-1
+    jmp .1 ; 重复执行
+.2:
+    mov eax, [ebp + 8] ; 目标内存区作为返回值
+
+    pop ecx ; 以下代码恢复堆栈
+    pop edi
+    pop esi
+    mov esp, ebp
+    pop ebp
+
+    ret
+
+InitKernel:
+    xor esi, esi ; esi = 0;
+    mov cx, word [BaseOfKernelFilePhyAddr + 2Ch] ; 这个内存地址存放的是ELF头中的e_phnum，即Program Header的个数
+    movzx ecx, cx ; ecx高16位置0，低16位置入cx
+    mov esi, [BaseOfKernelFilePhyAddr + 1Ch] ; 这个内存地址中存放的是ELF头中的e_phoff，即Program Header表的偏移
+    add esi, BaseOfKernelFilePhyAddr ; Program Header表的具体位置
+.Begin:
+    mov eax, [esi] ; 首先看一下段类型
+    cmp eax, 0 ; 段类型：PT_NULL或此处不存在Program Header
+    jz .NoAction ; 本轮循环不执行任何操作
+    ; 否则的话：
+    push dword [esi + 010h] ; p_filesz
+    mov eax, [esi + 04h] ; p_offset
+    add eax, BaseOfKernelFilePhyAddr ; BaseOfKernelFilePhyAddr + p_offset
+    push eax
+    push dword [esi + 08h] ; p_vaddr
+    call MemCpy ; 执行一次拷贝
+    add esp, 12 ; 清理堆栈
+.NoAction: ; 本轮循环的清理工作
+    add esi, 020h ; 下一个Program Header
+    dec ecx
+    jnz .Begin ; jz过来的话就直接ret了
+
+    ret
+
+[section .data1]
+StackSpace: times 1024 db 0 ; 栈暂且先给1KB
+TopOfStack  equ $ - StackSpace ; 栈顶
