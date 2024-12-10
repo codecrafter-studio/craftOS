@@ -5,11 +5,13 @@ BaseOfLoader            equ 09000h ; Loader的基址
 OffsetOfLoader          equ 0100h  ; Loader的偏移
 RootDirSectors          equ 14     ; 根目录大小
 SectorNoOfRootDirectory equ 19     ; 根目录起始扇区
+SectorNoOfFAT1          equ 1 ; 第一个FAT表的开始扇区
+DeltaSectorNo           equ 17 ; 由于第一个簇不用，所以RootDirSectors要-2再加上根目录区首扇区和偏移才能得到真正的地址，故把RootDirSectors-2封装成一个常量（17）
 
     jmp short LABEL_START
     nop ; BS_JMPBoot 由于要三个字节而jmp到LABEL_START只有两个字节 所以加一个nop
 
-    BS_OEMName     db 'tutorial'    ; 8个字节，内容随意
+    BS_OEMName     db 'tutorial'    ; 固定的8个字节
     BPB_BytsPerSec dw 512           ; 每扇区固定512个字节
     BPB_SecPerClus db 1             ; 每簇固定1个扇区
     BPB_RsvdSecCnt dw 1             ; MBR固定占用1个扇区
@@ -21,12 +23,12 @@ SectorNoOfRootDirectory equ 19     ; 根目录起始扇区
     BPB_SecPerTrk  dw 18            ; 每磁道扇区数，固定为18
     BPB_NumHeads   dw 2             ; 磁头数，bximage 的输出告诉我们是2个
     BPB_HiddSec    dd 0             ; 隐藏扇区数，没有
-    BPB_TotSec32   dd 0             ; 若之前的 BPB_TotSec16 处没有记录扇区数，则由此地址记录，如果记录了，这里直接置0即可
-    BS_DrvNum      db 0             ; int 13h 调用时所读取的驱动器号，由于只有一个软盘所以是0 
+    BPB_TotSec32   dd 0             ; 若之前的 BPB_TotSec16 处没有记录扇区数，则由此记录，如果记录了，这里直接置0即可
+    BS_DrvNum      db 0             ; int 13h 调用时所读取的驱动器号，由于只挂在一个软盘所以是0 
     BS_Reserved1   db 0             ; 未使用，预留
-    BS_BootSig     db 29h           ; 扩展引导标记，固定为 0x29
+    BS_BootSig     db 29h           ; 扩展引导标记
     BS_VolID       dd 0             ; 卷序列号，由于只挂载一个软盘所以为0
-    BS_VolLab      db 'OS-tutorial' ; 卷标，11个字节，内容随意
+    BS_VolLab      db 'OS-tutorial' ; 卷标，11个字节
     BS_FileSysType db 'FAT12   '    ; 由于是 FAT12 文件系统，所以写入 FAT12 后补齐8个字节
 
 LABEL_START:
@@ -35,6 +37,15 @@ LABEL_START:
     mov es, ax ; 将ds es设置为cs的值（因为此时字符串和变量等存在代码段内）
     mov ss, ax ; 将堆栈段也初始化至cs
     mov sp, BaseOfStack ; 设置栈顶
+
+    mov ax, 0600h ; AH=06h：向上滚屏，AL=00h：清空窗口
+    mov bx, 0700h ; 空白区域缺省属性
+    mov cx, 0 ; 左上：(0, 0)
+    mov dx, 0184fh ; 右下：(80, 25)
+    int 10h ; 执行
+
+    mov dh, 0
+    call DispStr ; Booting
 
     xor ah, ah ; 复位
     xor dl, dl
@@ -88,8 +99,47 @@ LABEL_NO_LOADERBIN: ; 若找不到loader.bin则到这里
     call DispStr; 显示No LOADER
     jmp $
 
-LABEL_FILENAME_FOUND: ; 找到了则到这里
-    jmp $ ; 什么都不做，直接死循环
+LABEL_FILENAME_FOUND:
+    mov ax, RootDirSectors ; 将ax置为根目录首扇区（19）
+    and di, 0FFE0h ; 将di设置到此文件块开头
+    add di, 01Ah ; 此时的di指向Loader的FAT号
+    mov cx, word [es:di] ; 获得该扇区的FAT号
+    push cx ; 将FAT号暂存
+    add cx, ax ; +根目录首扇区
+    add cx, DeltaSectorNo ; 获得真正的地址
+    mov ax, BaseOfLoader
+    mov es, ax
+    mov bx, OffsetOfLoader ; es:bx：读取扇区的缓冲区地址
+    mov ax, cx ; ax：起始扇区号
+
+LABEL_GOON_LOADING_FILE: ; 加载文件
+    push ax
+    push bx
+    mov ah, 0Eh ; AH=0Eh：显示单个字符
+    mov al, '.' ; AL：字符内容
+    mov bl, 0Fh ; BL：显示属性
+; 还有BH：页码，此处不管
+    int 10h ; 显示此字符
+    pop bx
+    pop ax ; 上面几行的整体作用：在屏幕上打印一个点
+
+    mov cl, 1
+    call ReadSector ; 读取Loader第一个扇区
+    pop ax ; 加载FAT号
+    call GetFATEntry ; 加载FAT项
+    cmp ax, 0FFFh
+    jz LABEL_FILE_LOADED ; 若此项=0FFF，代表文件结束，直接跳入Loader
+    push ax ; 重新存储FAT号，但此时的FAT号已经是下一个FAT了
+    mov dx, RootDirSectors
+    add ax, dx ; +根目录首扇区
+    add ax, DeltaSectorNo ; 获取真实地址
+    add bx, [BPB_BytsPerSec] ; 将bx指向下一个扇区开头
+    jmp LABEL_GOON_LOADING_FILE ; 加载下一个扇区
+
+LABEL_FILE_LOADED:
+    mov dh, 1 ; 打印第 1 条消息（Ready.）
+    call DispStr
+    jmp BaseOfLoader:OffsetOfLoader ; 跳入Loader！
 
 wRootDirSizeForLoop dw RootDirSectors ; 查找loader的循环中将会用到
 wSectorNo           dw 0              ; 用于保存当前扇区数
@@ -111,7 +161,7 @@ DispStr:
     mov es, ax ; 以防万一，重新设置es
     mov cx, MessageLength ; 字符串长度
     mov ax, 01301h ; ah=13h, 显示字符的同时光标移位
-    mov bx, 0007h ; 黑底灰字
+    mov bx, 0007h ; 黑底白字
     mov dl, 0 ; 第0行，前面指定的dh不变，所以给定第几条消息就打印到第几行
     int 10h ; 显示字符
     ret
@@ -131,7 +181,7 @@ ReadSector:
     shr al, 1 ; 每个磁道两个磁头，除以2可得真正的柱面编号
     mov ch, al ; 按照BIOS标准置入ch
     and dh, 1 ; 对磁道模2取余，可得位于哪个磁头，结果已经置入dh
-    pop bx ; 将bx还原
+    pop bx ; 将bx弹出
     mov dl, [BS_DrvNum] ; 将驱动器号存入dl
 .GoOnReading: ; 万事俱备，只欠读取！
     mov ah, 2 ; 读盘
@@ -142,6 +192,48 @@ ReadSector:
     add esp, 2
     pop bp ; 恢复堆栈
 
+    ret
+
+GetFATEntry:
+    push es
+    push bx
+    push ax ; 都会用到，push一下
+    mov ax, BaseOfLoader ; 获取Loader的基址
+    sub ax, 0100h ; 留出4KB空间
+    mov es, ax ; 此处就是缓冲区的基址
+    pop ax ; ax我们就用不到了
+    mov byte [bOdd], 0 ; 设置bOdd的初值
+    mov bx, 3
+    mul bx ; dx:ax=ax * 3（mul的第二重用法：如有进位，高位将放入dx）
+    mov bx, 2
+    div bx ; dx:ax / 2 -> dx：余数 ax：商
+; 此处* 1.5的原因是，每个FAT项实际占用的是1.5扇区，所以要把表项 * 1.5
+    cmp dx, 0 ; 没有余数
+    jz LABEL_EVEN
+    mov byte [bOdd], 1 ; 那就是奇数了
+LABEL_EVEN:
+    ; 此时ax中应当已经存储了待查找FAT相对于FAT表的偏移，下面我们借此来查找它的扇区号
+    xor dx, dx ; dx置0
+    mov bx, [BPB_BytsPerSec]
+    div bx ; dx:ax / 512 -> ax：商（扇区号）dx：余数（扇区内偏移）
+    push dx ; 暂存dx，后面要用
+    mov bx, 0 ; es:bx：(BaseOfLoader - 4KB):0
+    add ax, SectorNoOfFAT1 ; 实际扇区号
+    mov cl, 2
+    call ReadSector ; 直接读2个扇区，避免出现跨扇区FAT项出现bug
+    pop dx ; 由于ReadSector未保存dx的值所以这里保存一下
+    add bx, dx ; 现在扇区内容在内存中，bx+=dx，即是真正的FAT项
+    mov ax, [es:bx] ; 读取之
+
+    cmp byte [bOdd], 1
+    jnz LABEL_EVEN_2 ; 是偶数，则进入LABEL_EVEN_2
+    shr ax, 4 ; 高4位为真正的FAT项
+LABEL_EVEN_2:
+    and ax, 0FFFh ; 只保留低4位
+
+LABEL_GET_FAT_ENRY_OK: ; 胜利执行
+    pop bx
+    pop es ; 恢复堆栈
     ret
 
 times 510 - ($ - $$) db 0
