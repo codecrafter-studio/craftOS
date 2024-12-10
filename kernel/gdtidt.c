@@ -3,6 +3,7 @@
 
 extern void gdt_flush(uint32_t);
 extern void idt_flush(uint32_t);
+extern void syscall_handler(); // 这里是新增的
 
 gdt_entry_t gdt_entries[4096];
 gdt_ptr_t gdt_ptr;
@@ -71,6 +72,8 @@ static void init_idt()
     for (int i = 0; i < 32 + 16; i++) {
         idt_set_gate(i, (uint32_t) intr_table[i], 0x08, 0x8E);
     }
+
+    idt_set_gate(0x80, (uint32_t) syscall_handler, 0x08, 0x8E | 0x60); // 这里是新增的
 
     idt_flush((uint32_t) &idt_ptr);
 }

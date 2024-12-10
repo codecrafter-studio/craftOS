@@ -1,0 +1,14 @@
+#ifndef _STDIO_H_
+#define _STDIO_H_
+
+#include "common.h"
+#include "stdarg.h"
+
+int vsprintf(char *buf, const char *fmt, va_list ap);
+int sprintf(char *buf, const char *fmt, ...);
+int vprintf(const char *fmt, va_list ap);
+int printf(const char *fmt, ...);
+
+int printk(const char *fmt, ...); // for kernel use
+
+#endif

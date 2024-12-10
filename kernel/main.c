@@ -20,6 +20,12 @@ task_t *create_kernel_task(void *entry)
     return new_task;
 }
 
+void task_b_main()
+{
+    printf("task_b %s %d%c", "pid:", getpid(), '\n');
+    task_exit(0);
+}
+
 void kernel_main() // kernel.asm会跳转到这里
 {
     monitor_clear();
@@ -30,6 +36,12 @@ void kernel_main() // kernel.asm会跳转到这里
     asm("sti");
 
     task_t *task_a = task_init();
+    task_t *task_b = create_kernel_task(task_b_main);
+    task_run(task_b);
+
+    monitor_write("kernel_main pid: ");
+    monitor_write_dec(getpid());
+    monitor_put('\n');
 
     while (1) {
         if (fifo_status(&decoded_key) > 0) {
