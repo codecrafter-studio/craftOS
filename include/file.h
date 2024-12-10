@@ -44,4 +44,27 @@ typedef struct FAT_BPB_HEADER {
 #define SECTOR_CLUSTER_BALANCE (DATA_START_LBA - 2)
 #define MAX_FILE_NUM 512
 
+typedef enum FILE_TYPE {
+    FT_USABLE,
+    FT_REGULAR,
+    FT_UNKNOWN
+} file_type_t;
+
+typedef enum oflags {
+    O_RDONLY,
+    O_WRONLY,
+    O_RDWR,
+    O_CREAT = 4
+} oflags_t;
+
+typedef struct FILE_STRUCT {
+    void *handle;
+    void *buffer;
+    int pos;
+    int size;
+    int open_cnt;
+    file_type_t type;
+    oflags_t flags;
+} file_t;
+
 #endif

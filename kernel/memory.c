@@ -172,6 +172,21 @@ void kfree(void *p)
     return;
 }
 
+void *krealloc(void *buffer, int size)
+{
+    void *res = NULL;
+    if (!buffer) return kmalloc(size); // buffer为NULL，则realloc相当于malloc
+    if (!size) { // size为NULL，则realloc相当于free
+        kfree(buffer);
+        return NULL;
+    }
+    // 否则实现扩容
+    res = kmalloc(size); // 分配新的缓冲区
+    memcpy(res, buffer, size); // 将原缓冲区内容复制过去
+    kfree(buffer); // 释放原缓冲区
+    return res; // 返回新缓冲区
+}
+
 void init_memory()
 {
     uint32_t memtotal = memtest(0x00400000, 0xbfffffff);

@@ -14,10 +14,13 @@ typedef struct exit_retval {
     int pid, val;
 } exit_retval_t;
 
+#define MAX_FILE_OPEN_PER_TASK 32
+
 typedef struct TASK {
     uint32_t sel;
     int32_t flags;
     exit_retval_t my_retval;
+    int fd_table[MAX_FILE_OPEN_PER_TASK]; // here
     tss32_t tss;
 } task_t;
 
