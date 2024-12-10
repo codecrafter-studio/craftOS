@@ -1,15 +1,10 @@
 #include "timer.h"
 #include "isr.h"
-#include "monitor.h"
-
-uint32_t tick = 0; // 这里做一下记录，不过也没什么用？
+#include "mtask.h"
 
 static void timer_callback(registers_t *regs)
 {
-    tick++;
-    monitor_write("Tick: ");
-    monitor_write_dec(tick);
-    monitor_put('\n'); // 测试用，暂时打印一下ticks
+    task_switch(); // 每出现一次时钟中断，切换一次任务
 }
 
 void init_timer(uint32_t freq)

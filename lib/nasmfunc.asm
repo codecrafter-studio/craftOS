@@ -47,3 +47,13 @@ store_cr0:
     mov eax, [esp + 4] ; 获取参数
     mov cr0, eax ; 赋值cr0
     ret
+
+[global load_tr]
+load_tr:
+    ltr [esp + 4]
+    ret
+
+[global farjmp]
+farjmp:
+    jmp far [esp + 4]
+    ret
