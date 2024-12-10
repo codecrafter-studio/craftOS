@@ -67,4 +67,10 @@ typedef struct FILE_STRUCT {
     oflags_t flags;
 } file_t;
 
+typedef enum seeks {
+    SEEK_SET = 1,
+    SEEK_CUR,
+    SEEK_END
+} seeks_t;
+
 #endif

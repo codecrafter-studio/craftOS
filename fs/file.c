@@ -1,6 +1,9 @@
 #include "file.h"
 #include "mtask.h"
 #include "memory.h"
+#include "fifo.h" // 加在开头
+
+extern fifo_t decoded_key; // 加在开头
 
 static file_t file_table[MAX_FILE_NUM];
 

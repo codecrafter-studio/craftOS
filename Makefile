@@ -32,12 +32,13 @@ out/%.bin : boot/%.asm
 out/kernel.bin : $(OBJS)
 	i686-elf-ld -s -Ttext 0x100000 -o out/kernel.bin $(OBJS)
 
-a.img : out/boot.bin out/loader.bin out/kernel.bin
-	dd if=out/boot.bin of=a.img bs=512 count=1
-	edimg imgin:a.img copy from:out/loader.bin to:@: copy from:out/kernel.bin to:@: imgout:a.img
+hd.img : out/boot.bin out/loader.bin out/kernel.bin
+	ftimage hd.img -size 80 -bs out/boot.bin
+	ftcopy hd.img -srcpath out/loader.bin -to -dstpath /loader.bin
+	ftcopy hd.img -srcpath out/kernel.bin -to -dstpath /kernel.bin
 
-run : a.img
-	qemu-system-i386 -fda a.img -hda hd.img -boot a
+run : hd.img
+	qemu-system-i386 -hda hd.img -boot a
 
 clean :
 	cmd /c del /f /s /q out
