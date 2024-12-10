@@ -38,6 +38,7 @@ void monitor_put(char c) // 打印字符
     if (c == 0x08 && cursor_x) // 退格，且光标不在某行开始处
     {
         cursor_x--; // 直接把光标向后移一格
+        video_memory[cursor_y * 80 + cursor_x] = 0x20 | (attributeByte << 8); // 空格
     }
     else if (c == 0x09) // 制表符
     {
