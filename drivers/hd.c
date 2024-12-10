@@ -95,3 +95,25 @@ void hd_write(int lba, int sec_cnt, void *buffer)
 {
     write_disk(lba, sec_cnt, (uint32_t) buffer);
 }
+
+static int hd_size_cache = 0;
+
+int get_hd_sects()
+{
+    if (hd_size_cache) return hd_size_cache;
+    while (inb(0x1f7) & 0x80); // 等硬盘不忙了再发送命令，具体意义见wait_disk_ready
+    outw(0x1f6, 0x00);
+    outw(0x1f7, 0xec); // IDENTIFY 命令
+    wait_disk_ready();
+    uint16_t *hdinfo = (uint16_t *) kmalloc(512);
+    char *buffer = (char *) hdinfo;
+    for (int i = 0; i < 256; i++) {
+        // 每次硬盘会发送2个字节数据
+        uint16_t data = inw(0x1f0);
+        *((uint16_t *) buffer) = data; // 存入buf
+        buffer += 2;
+    }
+    int sectors = ((int) hdinfo[61] << 16) + hdinfo[60];
+    kfree(hdinfo);
+    return (hd_size_cache = sectors);
+}
