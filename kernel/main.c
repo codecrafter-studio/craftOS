@@ -43,6 +43,7 @@ void kernel_main() // kernel.asm会跳转到这里
     init_gdtidt();
     init_memory();
     init_timer(100);
+    init_keyboard();
     asm("sti");
 
     task_t *task_a = task_init(); // task_a: pid 0
