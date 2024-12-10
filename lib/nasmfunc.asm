@@ -19,3 +19,31 @@ idt_flush:
     mov eax, [esp + 4]
     lidt [eax]
     ret
+
+[global load_eflags]
+
+load_eflags:
+    pushfd ; eflags寄存器只能用pushfd/popfd操作，将eflags入栈/将栈中内容弹入eflags
+    pop eax ; eax = eflags;
+    ret ; return eax;
+
+[global store_eflags]
+
+store_eflags:
+    mov eax, [esp + 4] ; 获取参数
+    push eax
+    popfd ; eflags = eax;
+    ret
+
+[global load_cr0]
+
+load_cr0:
+    mov eax, cr0 ; cr0只能和eax之间mov
+    ret ; return cr0;
+
+[global store_cr0]
+
+store_cr0:
+    mov eax, [esp + 4] ; 获取参数
+    mov cr0, eax ; 赋值cr0
+    ret
