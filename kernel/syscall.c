@@ -1,5 +1,8 @@
 #include "common.h"
 #include "syscall.h"
+#include "fifo.h" // 加在开头
+
+extern fifo_t decoded_key; // 加在开头
 
 void syscall_manager(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax) // 这里的参数顺序是pushad的倒序，不可更改
 {
@@ -25,4 +28,22 @@ int sys_write(int fd, const void *msg, int len)
         return 0;
     }
     return -1;
+}
+
+int sys_read(int fd, void *buf, int count)
+{
+    int ret = -1;
+    if (fd == 0) { // 如果是标准输入
+        char *buffer = (char *) buf; // 先转成char *
+        uint32_t bytes_read = 0; // 读了多少个
+        while (bytes_read < count) { // 没达到count个
+            while (fifo_status(&decoded_key) == 0); // 只要没有新的键我就不读进来
+            *buffer = fifo_get(&decoded_key); // 获取新的键
+            bytes_read++;
+            buffer++; // buffer指向下一个
+        }
+        ret = (bytes_read == 0 ? -1 : (int) bytes_read); // 如果啥也没读着就-1，否则就正常返回就行了
+        return ret;
+    }
+    return -1; // 还没做
 }
