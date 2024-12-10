@@ -33,7 +33,12 @@ void kernel_main() // kernel.asm会跳转到这里
     task_t *task_shell = create_kernel_task(shell);
     //task_run(task_shell);
 
-    printk("create status: %d\n", fat16_create_file(NULL, "iloveado.fai"));
+    fileinfo_t finfo;
+    int status = fat16_open_file(&finfo, "iloveado.fai");
+    printk("open status: %d\n", status);
+    char *buf = (char *) kmalloc(512);
+    status = fat16_read_file(&finfo, buf);
+    printk("read status: %d\nfile content: %s\n", status, buf);
 
     while (1);
 }

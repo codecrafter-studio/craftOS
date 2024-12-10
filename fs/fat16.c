@@ -184,3 +184,149 @@ int fat16_open_file(fileinfo_t *finfo, char *filename)
         return -1;
     }
 }
+
+// 获取第n个FAT项
+static uint16_t get_nth_fat(uint16_t n)
+{
+    uint8_t *fat = (uint8_t *) kmalloc(512); // 分配临时FAT内存
+    uint32_t fat_start = FAT1_START_LBA; // 默认从FAT1中读取FAT
+    uint32_t fat_offset = n * 2; // FAT项在FAT表内的偏移，FAT16一个FAT是16位，即2个字节，所以乘2
+    uint32_t fat_sect = fat_start + (fat_offset / 512); // 该FAT项对应的扇区编号
+    uint32_t sect_offset = fat_offset % 512; // 该FAT项在扇区内的偏移
+    hd_read(fat_sect, 1, fat); // 读取对应的一个扇区到FAT内（由于*2，FAT项必然不跨扇区）
+    uint16_t table_val = *(uint16_t *) &fat[sect_offset]; // 从FAT表中找到对应的FAT项
+    kfree(fat); // 临时FAT表就用不上了
+    return table_val; // 返回对应的FAT项
+}
+
+// 设置第n个FAT项
+static void set_nth_fat(uint16_t n, uint16_t val)
+{
+    int fat_start = FAT1_START_LBA; // FAT1起始扇区
+    int second_fat_start = FAT1_START_LBA + FAT1_SECTORS; // FAT2起始扇区
+    uint8_t *fat = (uint8_t *) kmalloc(512); // 临时FAT表
+    uint32_t fat_offset = n * 2; // FAT项在FAT表内的偏移
+    uint32_t fat_sect = fat_start + (fat_offset / 512); // FAT项在FAT1中对应的扇区号
+    uint32_t second_fat_sect = second_fat_start + (fat_offset / 512); // FAT项在FAT2中对应的扇区号
+    uint32_t sect_offset = fat_offset % 512; // FAT项在扇区内的偏移
+    hd_read(fat_sect, 1, fat); // 读入到临时FAT表
+    *(uint16_t *) &fat[sect_offset] = val; // 直接设置对应的FAT项即可，FAT16没有那么多弯弯绕
+    hd_write(fat_sect, 1, fat); // 写入FAT1
+    hd_write(second_fat_sect, 1, fat); // 写入FAT2
+    kfree(fat); // 释放临时FAT表
+}
+
+// 读取第n个clust
+static void read_nth_clust(uint16_t n, void *clust)
+{
+    hd_read(n + SECTOR_CLUSTER_BALANCE, 1, clust);
+}
+
+// 写入第n个clust
+static void write_nth_clust(uint16_t n, const void *clust)
+{
+    hd_write(n + SECTOR_CLUSTER_BALANCE, 1, (void *) clust);
+}
+
+// 读取文件，当然要有素质地一次读整个文件啦
+int fat16_read_file(fileinfo_t *finfo, void *buf)
+{
+    uint16_t clustno = finfo->clustno; // finfo中记录的第一个簇号
+    char *clust = (char *) kmalloc(512); // 单独给簇分配一个缓冲区，直接往buf里写也行
+    do {
+        read_nth_clust(clustno, clust); // 将该簇号对应的簇读取进来
+        memcpy(buf, clust, 512); // 拷贝入buf
+        buf += 512; // buf后推一个扇区
+        clustno = get_nth_fat(clustno); // 获取下一个簇号
+        if (clustno >= 0xFFF8) break; // 文件结束，退出循环
+    } while (1);
+    kfree(clust); // 读完了，释放临时缓冲区
+    return 0; // 返回
+}
+
+// 删除文件
+int fat16_delete_file(char *filename) // 什么？为什么不传finfo？删除一个已经打开的文件，听上去很别扭不是吗（虽然在Linux下这很正常）
+{
+    char sfn[20] = {0};
+    int ret = lfn2sfn(filename, sfn); // 将文件名转换为8.3文件名
+    if (ret) return -1;
+    int entries;
+    fileinfo_t *root_dir = read_dir_entries(&entries); // 读取根目录
+    int file_ind = -1;
+    for (int i = 0; i < entries; i++) {
+        if (!memcmp(root_dir[i].name, sfn, 8) && !memcmp(root_dir[i].ext, sfn + 8, 3)) {
+            file_ind = i; // 找到对应文件了
+            break;
+        }
+    }
+    if (file_ind == -1) { // 没有找到
+        kfree(root_dir); // 不用删了
+        return -1;
+    }
+    root_dir[file_ind].name[0] = 0xe5; // 标记为已删除
+    hd_write(ROOT_DIR_START_LBA, ROOT_DIR_SECTORS, root_dir); // 更新根目录区数据
+    kfree(root_dir); // 释放临时缓冲区
+    if (root_dir[file_ind].clustno == 0) {
+        return 0; // 内容空空，那就到这里就可以了
+    }
+    unsigned short clustno = root_dir[file_ind].clustno, next_clustno; // 开始清理文件所占有的簇
+    while (1) {
+        next_clustno = get_nth_fat(clustno); // 找到这个文件下一个簇的簇号
+        set_nth_fat(clustno, 0); // 把下一个簇的簇号设为0，这样就找不到下一个簇了
+        if (next_clustno >= 0xfff8) break; // 已经删完了，直接返回
+        clustno = next_clustno; // 下一个簇设为当前簇
+    }
+    return 0; // 删除完成
+}
+
+// 写入文件，为简单起见相当于覆盖了
+int fat16_write_file(fileinfo_t *finfo, const void *buf, uint32_t size)
+{
+    uint16_t clustno = finfo->clustno, next_clustno; // 从已有首簇号开始
+    if (finfo->size == 0 && finfo->clustno == 0) { // 没有首簇号
+        clustno = 2; // 从第2个簇开始分配
+        while (1) {
+            if (get_nth_fat(clustno) == 0) { // 当前簇空闲
+                finfo->clustno = clustno; // 分配
+                break; // 已找到空闲簇号
+            }
+            clustno++; // 继续寻找下一个簇
+        }
+    }
+    finfo->size = size; // 更新大小
+    int write_sects = (size + 511) / 512; // 确认要写入的扇区总数，这里向上舍入
+    while (write_sects) { // 只要还要写
+        write_nth_clust(clustno, buf); // 将当前buf的512字节写入对应簇中
+        write_sects--; // 要写入扇区总数-1
+        buf += 512; // buf后移一个扇区
+        next_clustno = get_nth_fat(clustno); // 寻找下一个簇
+        if (next_clustno == 0 || next_clustno >= 0xfff8) {
+            // 当前簇不可用
+            next_clustno = clustno + 1; // 从下一个簇开始
+            while (1) {
+                if (get_nth_fat(next_clustno) == 0) { // 这个簇是可用的
+                    set_nth_fat(clustno, next_clustno); // 将这个簇当成下一个簇链接上去
+                    break;
+                } else next_clustno++; // 否则，只好继续了
+            }
+        }
+        clustno = next_clustno; // 将下一个簇看做当前簇
+    }
+    // 最后修改一下文件属性
+    current_time_t ctime;
+    get_current_time(&ctime); // 获取当前日期
+    // 更新日期和时间
+    finfo->date = ((ctime.year - 1980) << 9) | (ctime.month << 5) | ctime.day;
+    finfo->time = (ctime.hour << 11) | (ctime.min << 5) | ctime.sec;
+    int entries;
+    fileinfo_t *root_dir = read_dir_entries(&entries);
+    for (int i = 0; i < entries; i++) {
+        if (!memcmp(root_dir[i].name, finfo->name, 8) && !memcmp(root_dir[i].ext, finfo->ext, 3)) {
+            root_dir[i] = *finfo; // 找到对应的文件，写进根目录
+            break;
+        }
+    }
+    hd_write(ROOT_DIR_START_LBA, ROOT_DIR_SECTORS, root_dir); // 同步到硬盘
+    kfree(root_dir);
+    return 0;
+}
