@@ -2,6 +2,7 @@
 #define _MTASK_H_
 
 #include "common.h"
+#include "gdtidt.h"
 
 typedef struct TSS32 {
     uint32_t backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
@@ -20,7 +21,9 @@ typedef struct TASK {
     uint32_t sel;
     int32_t flags;
     exit_retval_t my_retval;
-    int fd_table[MAX_FILE_OPEN_PER_TASK]; // here
+    int fd_table[MAX_FILE_OPEN_PER_TASK];
+    gdt_entry_t ldt[2];
+    int ds_base; // 新增
     tss32_t tss;
 } task_t;
 

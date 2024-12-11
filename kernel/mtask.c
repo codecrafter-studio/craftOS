@@ -15,7 +15,9 @@ task_t *task_init()
     for (int i = 0; i < MAX_TASKS; i++) {
         taskctl->tasks0[i].flags = 0;
         taskctl->tasks0[i].sel = (TASK_GDT0 + i) * 8;
+        taskctl->tasks0[i].tss.ldtr = (TASK_GDT0 + MAX_TASKS + i) * 8;
         gdt_set_gate(TASK_GDT0 + i, (int) &taskctl->tasks0[i].tss, 103, 0x89); // 硬性规定，0x89 代表 TSS，103 是因为 TSS 共 26 个 uint32_t 组成，总计 104 字节，因规程减1变为103
+        gdt_set_gate(TASK_GDT0 + MAX_TASKS + i, (int) &taskctl->tasks0[i].ldt, 15, 0x82); // 0x82 代表 LDT，两个 GDT 表项共计 16 字节
     }
     task = task_alloc();
     task->flags = 2;
@@ -37,7 +39,6 @@ task_t *task_alloc()
             task->tss.eax = task->tss.ecx = task->tss.edx = task->tss.ebx = 0;
             task->tss.ebp = task->tss.esi = task->tss.edi = 0;
             task->tss.es = task->tss.ds = task->tss.fs = task->tss.gs = 0;
-            task->tss.ldtr = 0;
             task->tss.iomap = 0x40000000;
             task->my_retval.pid = -1;      // 这里是新增的部分
             task->my_retval.val = -114514; // 这里是新增的部分

@@ -34,6 +34,7 @@ void kernel_main() // kernel.asm会跳转到这里
     //task_run(task_shell);
 
     printk("Hello, HD Boot!");
+    sys_create_process("test_app.bin", "nothing", "/");
 
     while (1);
 }
