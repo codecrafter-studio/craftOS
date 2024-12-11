@@ -22,6 +22,42 @@ void ldt_set_gate(int32_t num, uint32_t base, uint32_t limit, uint16_t ar)
     task->ldt[num].access_right = ar & 0xFF; // ar部分只能存低4位了
 }
 
+static void expand_user_segment(int increment)
+{
+    task_t *task = task_now();
+    if (!task->is_user) return; // 内核都打满4GB了还需要扩容？
+    gdt_entry_t *segment = &task->ldt[1];
+    // 接下来把base和limit的石块拼出来
+    uint32_t base = segment->base_low | (segment->base_mid << 16) | (segment->base_high << 24); // 其实可以不用拼直接用ds_base 但还是拼一下吧当练习
+    uint32_t size = segment->limit_low | ((segment->limit_high & 0x0F) << 16);
+    if (segment->limit_high & 0x80) size *= 0x1000;
+    size++;
+    // 分配新的内存
+    void *new_base = (void *) kmalloc(size + increment + 5);
+    if (increment > 0) return; // expand是扩容你缩水是几个意思
+    memcpy(new_base, (void *) base, size); // 原来的内容全复制进去
+    // 用户进程的base必然由malloc分配，故用free释放之
+    kfree((void *) base);
+    // 那么接下来就是把new_base设置成新的段了
+    ldt_set_gate(1, (int) new_base, size + increment - 1, 0x4092 | 0x60); // 反正只有数据段允许扩容我也就设置成数据段算了
+    task->ds_base = (int) new_base; // 既然ds_base变了task里的应该同步更新
+}
+
+void *sys_sbrk(int incr)
+{
+    task_t *task = task_now();
+    if (task->is_user) { // 是应用程序
+        if (task->brk_start + incr > task->brk_end) { // 如果超出已有缓冲区
+            expand_user_segment(incr + 32 * 1024); // 再多扩展32KB
+            task->brk_end += incr + 32 * 1024; // 由于扩展了32KB，同步将brk_end移到现在的数据段结尾
+        }
+        void *ret = task->brk_start; // 旧的program break
+        task->brk_start += incr; // 直接添加就完事了
+        return ret; // 返回之
+    }
+    return NULL; // 非用户不允许使用sbrk
+}
+
 void app_entry(const char *app_name, const char *cmdline, const char *work_dir)
 {
     int fd = sys_open((char *) app_name, O_RDONLY);
@@ -30,17 +66,26 @@ void app_entry(const char *app_name, const char *cmdline, const char *work_dir)
     char *buf = (char *) kmalloc(size + 5);
     sys_read(fd, buf, size);
     int first, last;
-    char *code; // 存放代码的缓冲区
-    int entry = load_elf((Elf32_Ehdr *) buf, &code, &first, &last); // buf是文件读进来的那个缓冲区，code是存实际代码的
-    if (entry == -1) task_exit(-1); // 解析失败，直接exit(-1)
-    // 注意：以下代码非常不安全，仅供参考；不过目前我也没有找到更优的解
-    // 坑比 intel 在访问 [esp + xxx] 的地址时用的是 ds，ss 完全成了摆设，所以栈和数据必须放在一个段里，于是就炸了
-    char *ds = (char *) kmalloc(last - first + 4 * 1024 * 1024 + 5); // 新分配一个数据段，为原来大小+4MB+5
-    memcpy(ds, code, last - first); // 把代码复制过来，也就包含了必须要用的数据
-    task_now()->ds_base = (int) ds; // 数据段基址，与下面一致
+    char *code;
+    int entry = load_elf((Elf32_Ehdr *) buf, &code, &first, &last);
+    if (entry == -1) task_exit(-1);
+    char *ds = (char *) kmalloc(last - first + 4 * 1024 * 1024 + 1 * 1024 * 1024 - 5);
+    memcpy(ds, code, last - first);
+    task_now()->is_user = true;
+    // 这一块就是给用户用的
+    task_now()->brk_start = (void *) last - first + 4 * 1024 * 1024;
+    task_now()->brk_end = (void *) last - first + 5 * 1024 * 1024 - 1;
+    // 接下来把cmdline传给app，解析工作由CRT完成
+    // 这样我就不用管怎么把一个char **放到栈里了（（（（
+    int new_esp = last - first + 4 * 1024 * 1024 - 4;
+    int prev_brk = sys_sbrk(strlen(cmdline) + 5); // 分配cmdline这么长的内存，反正也输入不了1MB长的命令
+    strcpy((char *) (ds + prev_brk), cmdline); // sys_sbrk使用相对地址，要转换成以ds为基址的绝对地址需要加上ds
+    *((int *) (ds + new_esp)) = (int) prev_brk; // 把prev_brk的地址写进栈里，这个位置可以被_start访问
+    new_esp -= 4; // esp后移一个dword
+    task_now()->ds_base = (int) ds; // 设置ds基址
     ldt_set_gate(0, (int) code, last - first - 1, 0x409a | 0x60);
-    ldt_set_gate(1, (int) ds, last - first + 4 * 1024 * 1024 - 1, 0x4092 | 0x60); // 大小也多了4MB
-    start_app(entry, 0 * 8 + 4, last - first + 4 * 1024 * 1024 - 4, 1 * 8 + 4, &(task_now()->tss.esp0)); // 把栈顶设为4MB-4
+    ldt_set_gate(1, (int) ds, last - first + 4 * 1024 * 1024 + 1 * 1024 * 1024 - 1, 0x4092 | 0x60);
+    start_app(entry, 0 * 8 + 4, new_esp, 1 * 8 + 4, &(task_now()->tss.esp0));
     while (1);
 }
 

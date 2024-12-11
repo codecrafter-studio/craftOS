@@ -37,6 +37,9 @@ void syscall_manager(int edi, int esi, int ebp, int esp, int ebx, int edx, int e
         case 9:
             task_exit(ebx);
             break; // 到这里结束
+        case 10:
+            ret = (int) sys_sbrk(ebx);
+            break;
     }
     int *save_reg = &eax + 1;
     save_reg[7] = ret;

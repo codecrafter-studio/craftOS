@@ -1,10 +1,10 @@
 OBJS = out/kernel.o out/common.o out/monitor.o out/main.o out/gdtidt.o out/nasmfunc.o out/isr.o out/interrupt.o \
      out/string.o out/timer.o out/memory.o out/mtask.o out/keyboard.o out/keymap.o out/fifo.o out/syscall.o out/syscall_impl.o \
-     out/stdio.o out/kstdio.o out/shell.o out/hd.o out/fat16.o out/cmos.o out/file.o out/exec.o out/elf.o
+     out/stdio.o out/kstdio.o out/hd.o out/fat16.o out/cmos.o out/file.o out/exec.o out/elf.o
 
-LIBC_OBJECTS = out/syscall_impl.o out/stdio.o out/string.o
+LIBC_OBJECTS = out/syscall_impl.o out/stdio.o out/string.o out/malloc.o
 
-APPS = out/test_c.bin
+APPS = out/test_c.bin out/shell.bin out/c4.bin
 
 out/%.bin : apps/%.asm
 	nasm apps/$*.asm -o out/$*.o -f elf
@@ -50,9 +50,14 @@ out/kernel.bin : $(OBJS)
 
 hd.img : out/boot.bin out/loader.bin out/kernel.bin $(APPS)
 	ftimage hd.img -size 80 -bs out/boot.bin
-	ftcopy hd.img -srcpath out/loader.bin -to -dstpath /loader.bin
+	ftcopy hd.img -srcpath out/loader.bin -to -dstpath /loader.bin 
 	ftcopy hd.img -srcpath out/kernel.bin -to -dstpath /kernel.bin
 	ftcopy hd.img -srcpath out/test_c.bin -to -dstpath /test_c.bin
+	ftcopy hd.img -srcpath out/test2.bin -to -dstpath /test2.bin
+	ftcopy hd.img -srcpath out/shell.bin -to -dstpath /shell.bin
+	ftcopy hd.img -srcpath out/c4.bin -to -dstpath /c4.bin
+	ftcopy hd.img -srcpath apps/test_c.c -to -dstpath /test_c.c
+	ftcopy hd.img -srcpath apps/c4.c -to -dstpath /c4.c
 
 run : hd.img
 	qemu-system-i386 -hda hd.img

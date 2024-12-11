@@ -1,6 +1,8 @@
 #ifndef _UNISTD_H_
 #define _UNISTD_H_
 
+#include "stdint.h"
+
 int open(char *filename, uint32_t flags);
 int write(int fd, const void *msg, int len);
 int read(int fd, void *buf, int count);

@@ -93,3 +93,12 @@ exit:
     int 80h
     pop ebx
     ret
+
+[global sbrk]
+sbrk:
+    push ebx
+    mov eax, 10
+    mov ebx, [esp + 8]
+    int 80h
+    pop ebx
+    ret

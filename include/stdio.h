@@ -1,7 +1,8 @@
 #ifndef _STDIO_H_
 #define _STDIO_H_
 
-#include "common.h"
+#include "string.h"
+#include "stdint.h"
 #include "stdarg.h"
 
 int vsprintf(char *buf, const char *fmt, va_list ap);

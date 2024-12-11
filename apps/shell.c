@@ -1,7 +1,14 @@
-#include "shell.h" // MAX_CMD_LEN, MAX_ARG_NR
-#include "stdio.h"
+#include <stdio.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdbool.h>
+#include <unistd.h>
+
+#define MAX_CMD_LEN 100
+#define MAX_ARG_NR 30
 
 static char cmd_line[MAX_CMD_LEN] = {0}; // 输入命令行的内容
+static char cmd_line_back[MAX_CMD_LEN] = {0}; // 这一行是新加的
 static char *argv[MAX_ARG_NR] = {NULL}; // argv，字面意思
 
 static void print_prompt() // 输出提示符
@@ -63,7 +70,7 @@ static int cmd_parse(char *cmd_str, char **argv, char token)
 
 int try_to_run_external(char *name, int *exist)
 {
-    int ret = create_process(name, cmd_line, "/"); // 尝试执行应用程序
+    int ret = create_process(name, cmd_line_back, "/"); // 尝试执行应用程序
     *exist = false; // 文件不存在
     if (ret == -1) { // 哇真的不存在
         char new_name[MAX_CMD_LEN] = {0}; // 由于还没有实现malloc，所以只能这么搞，反正文件最长就是MAX_CMD_LEN这么长
@@ -74,7 +81,7 @@ int try_to_run_external(char *name, int *exist)
         new_name[len + 2] = 'i'; // 上个
         new_name[len + 3] = 'n'; // .bin
         new_name[len + 4] = '\0'; // 结束符
-        ret = create_process(new_name, cmd_line, "/"); // 第二次尝试执行应用程序
+        ret = create_process(new_name, cmd_line_back, "/"); // 第二次尝试执行应用程序
         if (ret == -1) return -1; // 文件还是不存在，那只能不存在了
     }
     *exist = true; // 错怪你了，文件存在
@@ -111,8 +118,15 @@ void shell()
         memset(cmd_line, 0, MAX_CMD_LEN);
         readline(cmd_line, MAX_CMD_LEN); // 输入一行命令
         if (cmd_line[0] == 0) continue; // 啥也没有，是换行，直接跳过
+        strcpy(cmd_line_back, cmd_line);
         int argc = cmd_parse(cmd_line, argv, ' '); // 解析命令，按照cmd_parse的要求传入，默认分隔符为空格
         cmd_execute(argc, argv); // 执行
     }
     puts("shell: PANIC: WHILE (TRUE) LOOP ENDS! RUNNNNNNN!!!"); // 到不了，不解释
+}
+
+int main()
+{
+    shell();
+    return 0;
 }

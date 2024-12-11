@@ -23,7 +23,9 @@ typedef struct TASK {
     exit_retval_t my_retval;
     int fd_table[MAX_FILE_OPEN_PER_TASK];
     gdt_entry_t ldt[2];
-    int ds_base; // 新增
+    int ds_base;
+    bool is_user;
+    void *brk_start, *brk_end; // here
     tss32_t tss;
 } task_t;
 

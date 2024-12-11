@@ -46,8 +46,9 @@ task_t *task_alloc()
             task->fd_table[1] = 1; // 标准输出，占位
             task->fd_table[2] = 2; // 标准错误，占位
             for (int i = 3; i < MAX_FILE_OPEN_PER_TASK; i++) {
-                task->fd_table[i] = -1; // 其余文件均可用
+                task->fd_table[i] = -1;
             }
+            task->is_user = false; // here
             return task;
         }
     }
@@ -121,5 +122,11 @@ int task_wait(int pid)
     task_t *task = &taskctl->tasks0[pid]; // 找出对应的task
     while (task->my_retval.pid == -1); // 若没有返回值就一直等着
     task->flags = 0; // 释放为可用
+    // 总算把你等死了，释放该任务所占资源
+    for (int i = 3; i < MAX_FILE_OPEN_PER_TASK; i++) {
+        if (task->fd_table[i] != -1) sys_close(task->fd_table[i]); // 关闭所有打开的文件
+    }
+    // 该任务malloc的所有东西都在数据段里，所以释放了数据段就相当于全释放了
+    if (task->is_user) kfree((void *) task->ds_base); // 释放数据段
     return task->my_retval.val; // 拿到返回值
 }

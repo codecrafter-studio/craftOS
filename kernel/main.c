@@ -28,10 +28,9 @@ void kernel_main() // kernel.asm会跳转到这里
     init_timer(100);
     init_keyboard();
     asm("sti");
+    task_init();
 
-    task_t *task_a = task_init();
-    task_t *task_shell = create_kernel_task(shell);
-    task_run(task_shell);
+    sys_create_process("shell.bin", "", "/");
 
     task_exit(0);
 }
