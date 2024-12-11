@@ -61,6 +61,27 @@ static int cmd_parse(char *cmd_str, char **argv, char token)
     return argc;
 }
 
+int try_to_run_external(char *name, int *exist)
+{
+    int ret = create_process(name, cmd_line, "/"); // 尝试执行应用程序
+    *exist = false; // 文件不存在
+    if (ret == -1) { // 哇真的不存在
+        char new_name[MAX_CMD_LEN] = {0}; // 由于还没有实现malloc，所以只能这么搞，反正文件最长就是MAX_CMD_LEN这么长
+        strcpy(new_name, name); // 复制文件名
+        int len = strlen(name); // 文件名结束位置
+        new_name[len] = '.'; // 给后
+        new_name[len + 1] = 'b'; // 缀加
+        new_name[len + 2] = 'i'; // 上个
+        new_name[len + 3] = 'n'; // .bin
+        new_name[len + 4] = '\0'; // 结束符
+        ret = create_process(new_name, cmd_line, "/"); // 第二次尝试执行应用程序
+        if (ret == -1) return -1; // 文件还是不存在，那只能不存在了
+    }
+    *exist = true; // 错怪你了，文件存在
+    ret = waitpid(ret); // 等待直到这个pid的进程返回并拿到结果
+    return ret; // 把返回值返回回去
+}
+
 void cmd_ver(int argc, char **argv)
 {
     puts("TutorialOS Indev");
@@ -71,7 +92,13 @@ void cmd_execute(int argc, char **argv)
     if (!strcmp("ver", argv[0])) {
         cmd_ver(argc, argv);
     } else {
-        printf("shell: bad command: %s\n", argv[0]);
+        int exist;
+        int ret = try_to_run_external(argv[0], &exist);
+        if (!exist) {
+            printf("shell: `%s` is not recognized as an internal or external command or executable file.\n", argv[0]);
+        } else if (ret) {
+            printf("shell: app `%s` exited abnormally, retval: %d (0x%x).\n", argv[0], ret, ret);
+        }
     }
 }
 

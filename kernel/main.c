@@ -31,10 +31,7 @@ void kernel_main() // kernel.asm会跳转到这里
 
     task_t *task_a = task_init();
     task_t *task_shell = create_kernel_task(shell);
-    //task_run(task_shell);
+    task_run(task_shell);
 
-    printk("Hello, HD Boot!");
-    sys_create_process("test_app.bin", "nothing", "/");
-
-    while (1);
+    task_exit(0);
 }

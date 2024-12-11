@@ -5,10 +5,39 @@
 void syscall_manager(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {
     int ds_base = task_now()->ds_base;
-    typedef int (*syscall_t)(int, int, int, int, int);
-    //(&eax + 1)[7] = ((syscall_t) syscall_table[eax])(ebx, ecx, edx, edi, esi);
-    syscall_t syscall_fn = (syscall_t) syscall_table[eax];
-    int ret = syscall_fn(ebx, ecx + ds_base, edx, edi, esi);
+    int ret = 0;
+    switch (eax) {
+        case 0:
+            ret = sys_getpid();
+            break;
+        case 1:
+            ret = sys_write(ebx, (char *) ecx + ds_base, edx);
+            break;
+        case 2:
+            ret = sys_read(ebx, (char *) ecx + ds_base, edx);
+            break;
+        case 3: // 从这里开始
+            ret = sys_open((char *) ebx + ds_base, ecx);
+            break;
+        case 4:
+            ret = sys_close(ebx);
+            break;
+        case 5:
+            ret = sys_lseek(ebx, ecx, edx);
+            break;
+        case 6:
+            ret = sys_unlink((char *) ebx + ds_base);
+            break;
+        case 7:
+            ret = sys_create_process((const char *) ebx + ds_base, (const char *) ecx + ds_base, (const char *) edx + ds_base);
+            break;
+        case 8:
+            ret = task_wait(ebx);
+            break;
+        case 9:
+            task_exit(ebx);
+            break; // 到这里结束
+    }
     int *save_reg = &eax + 1;
     save_reg[7] = ret;
 }

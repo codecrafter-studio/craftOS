@@ -1,5 +1,6 @@
 #include "monitor.h"
 #include "isr.h"
+#include "mtask.h"
 
 static isr_t interrupt_handlers[256];
 
@@ -9,7 +10,7 @@ void isr_handler(registers_t regs)
     monitor_write("received interrupt: ");
     monitor_write_dec(regs.int_no);
     monitor_put('\n');
-    while (1);
+    task_exit(-1); // 强制退出
 }
 
 void irq_handler(registers_t regs)
