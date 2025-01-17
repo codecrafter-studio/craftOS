@@ -35,4 +35,6 @@ struct idt_ptr_struct {
 typedef struct idt_ptr_struct idt_ptr_t;
 
 void gdt_set_gate(int32_t num, uint32_t base, uint32_t limit, uint16_t ar);
+void init_gdtidt();
+
 #endif

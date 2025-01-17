@@ -1,4 +1,5 @@
 #include "common.h"
+#include "memory.h"
 
 // 等待磁盘，直到它就绪
 static void wait_disk_ready()

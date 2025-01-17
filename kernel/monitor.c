@@ -1,7 +1,9 @@
 #include "monitor.h"
+#include "ansi.h"
 
 static uint16_t cursor_x = 0, cursor_y = 0; // 光标位置
 static uint16_t *video_memory = (uint16_t *) 0xB8000; // 一个字符占两个字节（字符本体+字符属性，即颜色等），因此用uint16_t
+static uint8_t attributeByte = (0 << 4) | (15 & 0x0F);
 
 static void move_cursor() // 根据当前光标位置（cursor_x，cursor_y）移动光标
 {
@@ -10,6 +12,34 @@ static void move_cursor() // 根据当前光标位置（cursor_x，cursor_y）�
     outb(0x3D5, cursorLocation >> 8); // 写入
     outb(0x3D4, 15); // 光标低8位
     outb(0x3D5, cursorLocation); // 写入，由于value声明的是uint8_t，因此会自动截断
+}
+
+int get_cursor_pos() { return (cursor_x + 1) << 8 | (cursor_y + 1); }
+
+void move_cursor_to(int new_x, int new_y)
+{
+    cursor_x = new_x - 1;
+    cursor_y = new_y - 1;
+    move_cursor();
+}
+
+void set_color(int fore, int back, int fore_brighten)
+{
+    fore %= 10; back %= 10;
+    int ansicode2vgacode[] = {0, 4, 2, 6, 1, 5, 3, 7};
+    fore = ansicode2vgacode[fore];
+    back = ansicode2vgacode[back];
+    fore |= fore_brighten << 3;
+    attributeByte = (back << 4) | (fore & 0x0F);
+}
+
+int get_color() { return attributeByte; }
+
+void set_char_at(int x, int y, char ch)
+{
+    x--, y--;
+    uint16_t *location = video_memory + (y * 80 + x);
+    *location = ch | (attributeByte << 8);
 }
 
 // 文本控制台共80列，25行（纵列竖行），因此当y坐标不低于25时就要滚屏了
@@ -73,7 +103,18 @@ void monitor_put(char c) // 打印字符
 
 void monitor_write(char *s)
 {
-    for (; *s; s++) monitor_put(*s); // 遍历字符串直到结尾，输出每一个字符
+    for (; *s; s++) {
+        if (*s == 0x1b) {
+            // 是esc，则解析ansi转义序列
+            int offset = parse_ansi(s);
+            // offset不为-1表示有意义的ANSI转义序列
+            if (offset != -1) {
+                s += offset; // 跳过后续这些字符不二次输出
+                continue;
+            }
+        }
+        monitor_put(*s); // 遍历字符串直到结尾，输出每一个字符
+    }
 }
 
 void monitor_clear()

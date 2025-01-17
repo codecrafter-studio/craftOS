@@ -13,7 +13,7 @@ static char *argv[MAX_ARG_NR] = {NULL}; // argv，字面意思
 
 static void print_prompt() // 输出提示符
 {
-    printf("[TUTO@localhost /] $ "); // 这一部分大家随便改，你甚至可以改成>>>
+    printf("csh$ "); // 这一部分大家随便改，你甚至可以改成>>>
 }
 
 static void readline(char *buf, int cnt) // 输入一行或cnt个字符
@@ -77,9 +77,9 @@ int try_to_run_external(char *name, int *exist)
         strcpy(new_name, name); // 复制文件名
         int len = strlen(name); // 文件名结束位置
         new_name[len] = '.'; // 给后
-        new_name[len + 1] = 'b'; // 缀加
-        new_name[len + 2] = 'i'; // 上个
-        new_name[len + 3] = 'n'; // .bin
+        new_name[len + 1] = 'c'; // 缀加
+        new_name[len + 2] = 'a'; // 上个
+        new_name[len + 3] = 'p'; // .bin
         new_name[len + 4] = '\0'; // 结束符
         ret = create_process(new_name, cmd_line_back, "/"); // 第二次尝试执行应用程序
         if (ret == -1) return -1; // 文件还是不存在，那只能不存在了
@@ -91,7 +91,7 @@ int try_to_run_external(char *name, int *exist)
 
 void cmd_ver(int argc, char **argv)
 {
-    puts("TutorialOS Indev");
+    puts("craftOS 1.0");
 }
 
 void cmd_execute(int argc, char **argv)
@@ -102,16 +102,16 @@ void cmd_execute(int argc, char **argv)
         int exist;
         int ret = try_to_run_external(argv[0], &exist);
         if (!exist) {
-            printf("shell: `%s` is not recognized as an internal or external command or executable file.\n", argv[0]);
+            printf("csh: `%s` is not recognized as an internal or external command or executable file.\n", argv[0]);
         } else if (ret) {
-            printf("shell: app `%s` exited abnormally, retval: %d (0x%x).\n", argv[0], ret, ret);
+            printf("csh: app `%s` exited abnormally, retval: %d (0x%x).\n", argv[0], ret, ret);
         }
     }
 }
 
 void shell()
 {
-    puts("TutorialOS Indev (tags/Indev:WIP, Jun 26 2024, 21:09) [GCC 32bit] on baremetal"); // 看着眼熟？这一部分是从 Python 3 里模仿的
+    puts("craftOS 1.0 (v1.0, Jan 16 2025, 21:40:00) [GCC 14.2.0] on barametal"); // 看着眼熟？这一部分是从 Python 3 里模仿的
     puts("Type \"ver\" for more information.\n"); // 示例，只打算支持这一个
     while (1) { // 无限循环
         print_prompt(); // 输出提示符
@@ -122,7 +122,7 @@ void shell()
         int argc = cmd_parse(cmd_line, argv, ' '); // 解析命令，按照cmd_parse的要求传入，默认分隔符为空格
         cmd_execute(argc, argv); // 执行
     }
-    puts("shell: PANIC: WHILE (TRUE) LOOP ENDS! RUNNNNNNN!!!"); // 到不了，不解释
+    puts("csh: PANIC: WHILE (TRUE) LOOP ENDS! RUNNNNNNN!!!"); // 到不了，不解释
 }
 
 int main()

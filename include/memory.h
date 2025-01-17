@@ -4,6 +4,9 @@
 #include "common.h"
 
 void init_memory();
+void *kmalloc(uint32_t size);
+void kfree(void *p);
+void *krealloc(void *buffer, int size);
 
 #define MEMMAN_FREES 4090
 

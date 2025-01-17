@@ -22,4 +22,6 @@ typedef struct {
 
 #define NEED_UTC_8
 
+void get_current_time(current_time_t *ctime);
+
 #endif

@@ -2,6 +2,7 @@
 #include "gdtidt.h"
 #include "memory.h"
 #include "isr.h"
+#include "syscall.h"
 
 extern void load_tr(int);
 extern void farjmp(int, int);

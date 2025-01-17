@@ -38,4 +38,6 @@ typedef struct {
     Elf32_Half e_shstrndx;  // 包含 Section 名称的字符串表位于哪一项
 } Elf32_Ehdr;
 
+int load_elf(Elf32_Ehdr *ehdr, char **buf, uint32_t *first, uint32_t *last);
+
 #endif

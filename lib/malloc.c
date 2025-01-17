@@ -1,6 +1,8 @@
 #include <unistd.h>
 #include <stddef.h>
 
+extern void *sbrk();
+
 typedef char ALIGN[16];
 
 typedef union header {

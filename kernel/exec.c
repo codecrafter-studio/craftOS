@@ -3,6 +3,20 @@
 #include "memory.h"
 #include "mtask.h"
 #include "elf.h"
+#include "syscall.h"
+
+extern void start_app(int new_eip, int new_cs, int new_esp, int new_ss, int *esp0);
+
+task_t *create_kernel_task(void *entry)
+{
+    task_t *new_task;
+    new_task = task_alloc();
+    new_task->tss.esp = (uint32_t) kmalloc(64 * 1024) + 64 * 1024 - 4;
+    new_task->tss.eip = (int) entry;
+    new_task->tss.es = new_task->tss.ss = new_task->tss.ds = new_task->tss.fs = new_task->tss.gs = 2 * 8;
+    new_task->tss.cs = 1 * 8;
+    return new_task;
+}
 
 void ldt_set_gate(int32_t num, uint32_t base, uint32_t limit, uint16_t ar)
 {
@@ -78,8 +92,8 @@ void app_entry(const char *app_name, const char *cmdline, const char *work_dir)
     // 接下来把cmdline传给app，解析工作由CRT完成
     // 这样我就不用管怎么把一个char **放到栈里了（（（（
     int new_esp = last - first + 4 * 1024 * 1024 - 4;
-    int prev_brk = sys_sbrk(strlen(cmdline) + 5); // 分配cmdline这么长的内存，反正也输入不了1MB长的命令
-    strcpy((char *) (ds + prev_brk), cmdline); // sys_sbrk使用相对地址，要转换成以ds为基址的绝对地址需要加上ds
+    int *prev_brk = sys_sbrk(strlen(cmdline) + 5); // 分配cmdline这么长的内存，反正也输入不了1MB长的命令
+    strcpy((char *) (*ds + *prev_brk), cmdline); // sys_sbrk使用相对地址，要转换成以ds为基址的绝对地址需要加上ds
     *((int *) (ds + new_esp)) = (int) prev_brk; // 把prev_brk的地址写进栈里，这个位置可以被_start访问
     new_esp -= 4; // esp后移一个dword
     task_now()->ds_base = (int) ds; // 设置ds基址

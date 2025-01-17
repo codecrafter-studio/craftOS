@@ -1,6 +1,7 @@
 #include "common.h"
 #include "syscall.h"
 #include "mtask.h"
+#include "exec.h"
 
 void syscall_manager(int edi, int esi, int ebp, int esp, int ebx, int edx, int ecx, int eax)
 {

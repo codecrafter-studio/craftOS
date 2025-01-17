@@ -1,0 +1,25 @@
+{
+    "files.associations": {
+        "*.pyi": "python",
+        "memory.h": "c",
+        "keyboard.h": "c",
+        "__hash_table": "c",
+        "__split_buffer": "c",
+        "array": "c",
+        "bitset": "c",
+        "deque": "c",
+        "initializer_list": "c",
+        "queue": "c",
+        "span": "c",
+        "stack": "c",
+        "string": "c",
+        "string_view": "c",
+        "unordered_map": "c",
+        "vector": "c",
+        "format": "c",
+        "compare": "c",
+        "cstdint": "c",
+        "stdio.h": "c",
+        "fifo.h": "c"
+    }
+}
