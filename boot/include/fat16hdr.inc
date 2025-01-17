@@ -16,7 +16,7 @@
     BS_BootSig     db 29h           ; 扩展引导标记
     BS_VolID       dd 0             ; 卷序列号，由于只挂载一个盘所以为0
     BS_VolLab      db 'craftOS-1.0' ; 卷标，11个字节
-    BS_FileSysType db 'FAT16   '    ; 由于是 FAT16 文件系统，所以写入 FAT16 后补齐8个字节
+    BS_FileSysType db 'FAT32   '    ; 由于是 FAT16 文件系统，所以写入 FAT16 后补齐8个字节
 
 FATSz                   equ 32      ; BPB_FATSz16
 RootDirSectors          equ 32      ; 根目录大小

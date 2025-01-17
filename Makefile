@@ -53,12 +53,12 @@ build/osdisk.img : out/boot.bin out/loader.bin out/kernel.bin $(APPS)
 	binutils/ftimage build/osdisk.img -size 80 -bs out/boot.bin
 	binutils/ftcopy build/osdisk.img -srcpath out/loader.bin -to -dstpath /loader.bin 
 	binutils/ftcopy build/osdisk.img -srcpath out/kernel.bin -to -dstpath /kernel.bin
-	binutils/ftcopy build/osdisk.img -srcpath out/testc.bin -to -dstpath /testc.cap
-	# binutils/ftcopy build/osdisk.img -srcpath out/test2.bin -to -dstpath /test2.cap
-	binutils/ftcopy build/osdisk.img -srcpath out/shell.bin -to -dstpath /shell.cap
-	binutils/ftcopy build/osdisk.img -srcpath out/c4.bin -to -dstpath /c4.cap
-	binutils/ftcopy build/osdisk.img -srcpath out/colorful.bin -to -dstpath /colorful.cap
-	binutils/ftcopy build/osdisk.img -srcpath out/help.bin -to -dstpath /help.cap
+	binutils/ftcopy build/osdisk.img -srcpath out/testc.bin -to -dstpath /testc.cxp
+	# binutils/ftcopy build/osdisk.img -srcpath out/test2.bin -to -dstpath /test2.cxp
+	binutils/ftcopy build/osdisk.img -srcpath out/shell.bin -to -dstpath /shell.cxp
+	binutils/ftcopy build/osdisk.img -srcpath out/c4.bin -to -dstpath /c4.cxp
+	binutils/ftcopy build/osdisk.img -srcpath out/colorful.bin -to -dstpath /colorful.cxp
+	binutils/ftcopy build/osdisk.img -srcpath out/help.bin -to -dstpath /help.cxp
 
 run : build/osdisk.img
 	qemu-system-i386 -hda build/osdisk.img

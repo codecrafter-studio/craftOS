@@ -78,8 +78,8 @@ int try_to_run_external(char *name, int *exist)
         int len = strlen(name); // 文件名结束位置
         new_name[len] = '.'; // 给后
         new_name[len + 1] = 'c'; // 缀加
-        new_name[len + 2] = 'a'; // 上个
-        new_name[len + 3] = 'p'; // .bin
+        new_name[len + 2] = 'x'; // 上个
+        new_name[len + 3] = 'p'; // .cxp
         new_name[len + 4] = '\0'; // 结束符
         ret = create_process(new_name, cmd_line_back, "/"); // 第二次尝试执行应用程序
         if (ret == -1) return -1; // 文件还是不存在，那只能不存在了

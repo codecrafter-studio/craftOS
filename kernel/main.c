@@ -21,7 +21,7 @@ void kernel_main()
     asm("sti");
     task_init();
 
-    sys_create_process("shell.cap", "", "/");
+    sys_create_process("shell.cxp", "", "/");
 
     task_exit(0);
 }
