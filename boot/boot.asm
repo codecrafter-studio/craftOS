@@ -122,12 +122,12 @@ wRootDirSizeForLoop dw RootDirSectors ; 查找loader的循环中将会用到
 wSectorNo           dw 0              ; 用于保存当前扇区数
 bOdd                db 0              ; 这个其实是下一节的东西，不过先放在这也不是不行
 
-LoaderFileName      db "LOADER  BIN", 0 ; loader的文件名
+LoaderFileName      db "LOADER  CXP", 0 ; loader的文件名
 
-MessageLength       equ 9 ; 下面是三条小消息，此变量用于保存其长度，事实上在内存中它们的排序类似于二维数组
-BootMessage:        db "Booting  " ; 此处定义之后就可以删除原先定义的BootMessage字符串了
-Message1            db "Ready.   " ; 显示已准备好
-Message2            db "No LOADER" ; 显示没有Loader
+MessageLength       equ 16 ; 下面是三条小消息，此变量用于保存其长度，事实上在内存中它们的排序类似于二维数组
+BootMessage:        db "Booting craftOS " ; 此处定义之后就可以删除原先定义的BootMessage字符串了
+Message1            db "Loader Found    " ; 显示已准备好
+Message2            db "Loader Not Found" ; 显示没有Loader
 
 DispStr:
     mov ax, MessageLength

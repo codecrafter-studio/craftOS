@@ -8,6 +8,9 @@ typedef          short int16_t;
 typedef unsigned char  uint8_t;
 typedef          char  int8_t;
 
+typedef unsigned long size_t;
+typedef long ssize_t;
+
 typedef int8_t bool;
 #define true 1
 #define false 0

@@ -3,6 +3,8 @@
 
 #include "common.h"
 #include "gdtidt.h"
+#include "syscall.h"
+#include "memory.h"
 
 typedef struct TSS32 {
     uint32_t backlink, esp0, ss0, esp1, ss1, esp2, ss2, cr3;
@@ -46,5 +48,6 @@ task_t *task_now();
 int task_pid(task_t *task);
 void task_exit(int value);
 int task_wait(int pid);
+task_t *create_kernel_task(void *entry);
 
 #endif

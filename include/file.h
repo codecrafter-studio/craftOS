@@ -73,4 +73,9 @@ typedef enum seeks {
     SEEK_END
 } seeks_t;
 
+typedef struct {
+    int path_stack_top;
+    char **path_stack;
+} path_stack_t;
+
 #endif

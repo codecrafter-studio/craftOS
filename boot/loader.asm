@@ -30,7 +30,7 @@ LABEL_START:
     mov sp, BaseOfStack ; 设置栈顶
 
     mov dh, 0
-    call DispStr ; Loading
+    call DispStr ; Loading Kernel
 
     mov word [wSectorNo], SectorNoOfRootDirectory ; 开始查找，将当前读到的扇区数记为根目录区的开始扇区（19）
     xor ah, ah ; 复位
@@ -38,7 +38,7 @@ LABEL_START:
     int 13h ; 执行软驱复位
 LABEL_SEARCH_IN_ROOT_DIR_BEGIN:
     cmp word [wRootDirSizeForLoop], 0 ; 将剩余的根目录区扇区数与0比较
-    jz LABEL_NO_KERNELBIN ; 相等，不存在Kernel，进行善后
+    jz LABEL_NO_KERNELCXP ; 相等，不存在Kernel，进行善后
     dec word [wRootDirSizeForLoop] ; 减去一个扇区
     mov ax, BaseOfKernelFile
     mov es, ax
@@ -51,7 +51,7 @@ LABEL_SEARCH_IN_ROOT_DIR_BEGIN:
     mov di, OffsetOfKernelFile ; 为比对做准备，此处是将es:di设为Kernel偏移量（即根目录区中的首个文件块）
     cld ; FLAGS.DF=0，即执行lodsb/lodsw/lodsd后，si自动增加
     mov dx, 10h ; 共16个文件块（代表一个扇区，因为一个文件块32字节，16个文件块正好一个扇区）
-LABEL_SEARCH_FOR_KERNELBIN:
+LABEL_SEARCH_FOR_KERNELCXP:
     cmp dx, 0 ; 将dx与0比较
     jz LABEL_GOTO_NEXT_SECTOR_IN_ROOT_DIR ; 继续前进一个扇区
     dec dx ; 否则将dx减1
@@ -61,7 +61,7 @@ LABEL_CMP_FILENAME: ; 比对文件名
     jz LABEL_FILENAME_FOUND ; 若相等，说明文件名完全一致，表示找到，进行找到后的处理
     dec cx ; cx减1，表示读取1个字符
     lodsb ; 将ds:si的内容置入al，si加1
-    cmp al, byte [es:di] ; 此字符与KERNEL  BIN中的当前字符相等吗？
+    cmp al, byte [es:di] ; 此字符与KERNEL  CXP中的当前字符相等吗？
     jz LABEL_GO_ON ; 下一个文件名字符
     jmp LABEL_DIFFERENT ; 下一个文件块
 LABEL_GO_ON:
@@ -72,15 +72,15 @@ LABEL_DIFFERENT:
     and di, 0FFE0h ; 指向该文件块开头
     add di, 20h ; 跳过32字节，即指向下一个文件块开头
     mov si, KernelFileName ; 重置ds:si
-    jmp LABEL_SEARCH_FOR_KERNELBIN ; 由于要重新设置一些东西，所以回到查找Kernel循环的开头
+    jmp LABEL_SEARCH_FOR_KERNELCXP ; 由于要重新设置一些东西，所以回到查找Kernel循环的开头
 
 LABEL_GOTO_NEXT_SECTOR_IN_ROOT_DIR:
     add word [wSectorNo], 1 ; 下一个扇区
     jmp LABEL_SEARCH_IN_ROOT_DIR_BEGIN ; 重新执行主循环
 
-LABEL_NO_KERNELBIN: ; 若找不到kernel.bin则到这里
+LABEL_NO_KERNELCXP: ; 若找不到kernel.cxp则到这里
     mov dh, 2
-    call DispStr ; 显示No KERNEL
+    call DispStr ; 显示Kernel Not Found
     jmp $
 
 LABEL_FILENAME_FOUND:
@@ -127,7 +127,7 @@ LABEL_GOON_LOADING_FILE: ; 加载文件
     jmp LABEL_GOON_LOADING_FILE ; 加载下一个扇区
 
 LABEL_FILE_LOADED:
-    mov dh, 1 ; "Ready."
+    mov dh, 1 ; "Kernel Found"
     call DispStr
 ; 准备进入保护模式
     lgdt [GdtPtr] ; 加载gdt
@@ -148,12 +148,12 @@ wRootDirSizeForLoop dw RootDirSectors ; 查找Kernel的循环中将会用到
 wSectorNo           dw 0              ; 用于保存当前扇区数
 bOdd                db 0              ; 这个其实是下一节的东西，不过先放在这也不是不行
 
-KernelFileName      db "KERNEL  BIN", 0 ; Kernel的文件名
+KernelFileName      db "KERNEL  CXP", 0 ; Kernel的文件名
 
-MessageLength       equ 9 ; 下面是三条小消息，此变量用于保存其长度，事实上在内存中它们的排序类似于二维数组
-BootMessage:        db "Loading  " ; 此处定义之后就可以删除原先定义的BootMessage字符串了
-Message1            db "Ready.   " ; 显示已准备好
-Message2            db "No KERNEL" ; 显示没有Kernel
+MessageLength       equ 16 ; 下面是三条小消息，此变量用于保存其长度，事实上在内存中它们的排序类似于二维数组
+BootMessage:        db "Loading Kernel  " ; 此处定义之后就可以删除原先定义的BootMessage字符串了
+Message1            db "Kernel Found    " ; 显示已准备好
+Message2            db "Kernel Not Found" ; 显示没有Kernel
 
 DispStr: ; void DispStr(char idx);
 ; idx -> dh

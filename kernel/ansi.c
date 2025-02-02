@@ -1,5 +1,8 @@
 #include "monitor.h"
+<<<<<<< HEAD
+=======
 // 新增部分从此开始
+>>>>>>> 44c55f4af7f78d04054f17be5c64cfa6dc65fcfc
 #include "fifo.h"
 #include "stdio.h"
 
@@ -10,9 +13,16 @@ extern fifo_t decoded_key;
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 #define max(a, b) ((a) > (b) ? (a) : (b))
+<<<<<<< HEAD
+// 新增部分到此结束
+static int param_arr[255] = {0};
+static int param_idx = 0;
+static int save_x = 0, save_y = 0; // 这一行也是新增的
+=======
 int param_arr[255] = {0}; // 存参数的数组
 int param_idx = 0; // 现在这个参数应该被放在什么位置
 static int save_x = 0, save_y = 0;
+>>>>>>> 44c55f4af7f78d04054f17be5c64cfa6dc65fcfc
 
 // 解析ansi控制序列，返回值是开始的esc后一共有多少个字符，不为合法ANSI转义序列返回-1
 int parse_ansi(const char *ansi)
@@ -44,6 +54,10 @@ int parse_ansi(const char *ansi)
     }
     // 参数解析部分结束，最后一个字符是CSI对应命令
     char cmd = *ansi;
+<<<<<<< HEAD
+    // 至此已将ansi控制序列拆成param_arr和cmd两部分
+=======
+>>>>>>> 44c55f4af7f78d04054f17be5c64cfa6dc65fcfc
     int cursor_pos = get_cursor_pos();
     int cursor_x = cursor_pos >> 8;
     int cursor_y = cursor_pos & 0xff;

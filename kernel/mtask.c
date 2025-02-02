@@ -131,3 +131,14 @@ int task_wait(int pid)
     if (task->is_user) kfree((void *) task->ds_base); // 释放数据段
     return task->my_retval.val; // 拿到返回值
 }
+
+task_t *create_kernel_task(void *entry)
+{
+    task_t *new_task;
+    new_task = task_alloc();
+    new_task->tss.esp = (uint32_t) kmalloc(64 * 1024) + 64 * 1024 - 4;
+    new_task->tss.eip = (int) entry;
+    new_task->tss.es = new_task->tss.ss = new_task->tss.ds = new_task->tss.fs = new_task->tss.gs = 2 * 8;
+    new_task->tss.cs = 1 * 8;
+    return new_task;
+}

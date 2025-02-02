@@ -3,6 +3,9 @@
 
 #include "common.h"
 
+void *kmalloc(uint32_t size);
+void kfree(void *p);
+void *krealloc(void *buffer, int size);
 void init_memory();
 void *kmalloc(uint32_t size);
 void kfree(void *p);

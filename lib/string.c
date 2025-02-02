@@ -54,3 +54,35 @@ char *strchr(const char *str, const uint8_t ch)
     }
     return NULL;
 }
+
+int strncmp(const char *str1, const char *str2, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        if (str1[i] == '\0' || str2[i] == '\0') {
+            return (unsigned char)str1[i] - (unsigned char)str2[i];
+        }
+        if (str1[i] != str2[i]) {
+            return (unsigned char)str1[i] - (unsigned char)str2[i];
+        }
+    }
+
+    return 0;
+}
+
+int startswith(const char *str, const char *prefix) {
+    if (strlen(prefix) > strlen(str)) {
+        return 0;
+    }
+
+    return strncmp(str, prefix, strlen(prefix)) == 0;
+}
+
+int endswith(const char *str, const char *suffix) {
+    size_t str_len = strlen(str);
+    size_t suffix_len = strlen(suffix);
+
+    if (suffix_len > str_len) {
+        return 0;
+    }
+
+    return strncmp(str + str_len - suffix_len, suffix, suffix_len) == 0;
+}

@@ -1,8 +1,10 @@
 #include <stdio.h>
 
-int main()
+int main(int argc, char **argv)
 {
-    int a;
-    printf("Hello, World!\nThis is a C program test for craftOS.\n");
+    printf("Hello, World!\n");
+    int a = 0;
+    scanf("%d", &a);
+    printf("%d", a);
     return 0;
 }

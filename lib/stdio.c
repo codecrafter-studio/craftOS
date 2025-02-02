@@ -1,5 +1,6 @@
 #include "common.h"
 #include "stdarg.h" // 在开头添加，因为用到了va_list以及操纵va_list的这些东西
+#include "unistd.h"
 
 extern void write();
 
@@ -94,4 +95,94 @@ int putchar(char ch)
 {
     printf("%c", ch);
     return ch;
+}
+
+static void readline(char *buf, int cnt) {
+    char *pos = buf;
+    while (read(0, pos, 1) != -1 && (pos - buf) < cnt) { // 读字符成功且没到cnt个
+        switch (*pos) {
+            case '\n':
+            case '\r': // 回车或换行，结束
+                *pos = 0;
+                putchar('\n'); // read不自动回显，需要手动补一个\n
+                return; // 返回
+            case '\b': // 退格
+                if (buf[0] != '\b') { // 如果不在第一个
+                    --pos; // 指向上一个位置
+                    putchar('\b'); // 手动输出一个退格
+                }
+                break;
+            default:
+                putchar(*pos); // 都不是，那就直接输出刚输入进来的东西
+                pos++; // 指向下一个位置
+        }
+    }
+}
+
+// 转换字符串为整数
+int str_to_int(const char *str) {
+    int result = 0;
+    while (*str) {
+        if (*str < '0' || *str > '9') break; // 非数字字符
+        result = result * 10 + (*str - '0');
+        str++;
+    }
+    return result;
+}
+
+// 手动实现vscanf
+int vscanf(const char *fmt, va_list ap) {
+    const char *index_ptr = fmt;
+    char index_char = *index_ptr;
+    char input_buf[1024];
+    int input_len = 0;
+
+    // 读取输入
+    readline(input_buf, sizeof(input_buf));
+
+    // 遍历格式字符串
+    while (index_char) {
+        if (index_char != '%') {
+            index_char = *(++index_ptr); // 跳过非%字符
+            continue;
+        }
+
+        index_char = *(++index_ptr); // 跳过%字符
+
+        switch (index_char) {
+            case 's': // 读取字符串
+                {
+                    char *arg_str = va_arg(ap, char*);
+                    // 复制字符串
+                    strcpy(arg_str, input_buf);
+                }
+                break;
+            case 'c': // 读取字符
+                {
+                    char *arg_char = va_arg(ap, char*);
+                    *arg_char = input_buf[0]; // 假设读取的字符为第一个
+                }
+                break;
+            case 'd': // 读取整数
+                {
+                    int *arg_int = va_arg(ap, int*);
+                    *arg_int = str_to_int(input_buf); // 使用str_to_int转换
+                }
+                break;
+            default:
+                break;
+        }
+
+        index_char = *(++index_ptr); // 跳过格式符后的字符
+    }
+
+    return 1; // 成功读取一个值
+}
+
+int scanf(const char *fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int ret = vscanf(fmt, ap);
+    va_end(ap);
+    return ret;
 }

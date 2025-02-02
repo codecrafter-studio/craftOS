@@ -45,7 +45,7 @@ void set_char_at(int x, int y, char ch)
 // 文本控制台共80列，25行（纵列竖行），因此当y坐标不低于25时就要滚屏了
 static void scroll() // 滚屏
 {
-    uint8_t attributeByte = (0 << 4) | (15 & 0x0F); // 黑底白字
+    // uint8_t attributeByte = (0 << 4) | (15 & 0x0F); // 黑底白字
     uint16_t blank = 0x20 | (attributeByte << 8); // 0x20 -> 空格这个字，attributeByte << 8 -> 属性位
 
     if (cursor_y >= 25) // 控制台共25行，超过即滚屏
@@ -60,7 +60,7 @@ static void scroll() // 滚屏
 void monitor_put(char c) // 打印字符
 {
     uint8_t backColor = 0, foreColor = 15; // 背景：黑，前景：白
-    uint8_t attributeByte = (backColor << 4) | (foreColor & 0x0f); // 黑底白字
+    // uint8_t attributeByte = (backColor << 4) | (foreColor & 0x0f); // 黑底白字
     uint16_t attribute = attributeByte << 8; // 高8位为字符属性位
     uint16_t *location; // 写入位置
 

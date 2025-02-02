@@ -11,6 +11,7 @@ int vprintf(const char *fmt, va_list ap);
 int printf(const char *fmt, ...);
 void puts(const char *buf);
 int putchar(char ch);
+int scanf(const char *fmt, ...);
 
 int printk(const char *fmt, ...); // for kernel use
 

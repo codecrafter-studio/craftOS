@@ -1,6 +1,10 @@
 #ifndef _SYSCALL_H_
 #define _SYSCALL_H_
 
+#include "stdint.h"
+
+extern void *sbrk(intptr_t increment);
+
 int sys_getpid();
 int sys_create_process(const char *app_name, const char *cmdline, const char *work_dir);
 

@@ -1,5 +1,7 @@
 #include <unistd.h>
 #include <stddef.h>
+#include <stdint.h>
+#include "syscall.h"
 
 extern void *sbrk();
 
