@@ -116,9 +116,3 @@ int main()
     }
     puts("csh: PANIC: WHILE (TRUE) LOOP ENDS! RUNNNNNNN!!!"); // 到不了，不解释
 }
-
-int main()
-{
-    shell();
-    return 0;
-}

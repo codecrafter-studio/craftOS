@@ -2,8 +2,6 @@
 #include "stdarg.h" // 在开头添加，因为用到了va_list以及操纵va_list的这些东西
 #include "unistd.h"
 
-extern void write();
-
 static void itoa(uint32_t num, char **buf_ptr_addr, int radix)
 {
     uint32_t m = num % radix; // 最低位
